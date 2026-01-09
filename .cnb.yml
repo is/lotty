@@ -1,0 +1,18 @@
+$:
+  vscode:
+    - docker:
+        image: docker.cnb.cool/boot-io/ws:code-agent
+      imports:
+        - https://cnb.cool/io8/secrets/-/blob/main/loki.yml
+        - https://cnb.cool/io8/secrets/-/blob/main/naco.yml
+      runner:
+        cpus: 8
+      services:
+        - vscode
+        - docker
+      stages:
+        - name: bootup
+          imports:
+            - https://cnb.cool/io8/secrets/-/blob/main/zero.yml
+          script: |
+            sh -c "$BOOT"
