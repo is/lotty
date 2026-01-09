@@ -23,7 +23,7 @@ func LoadConfig() (*types.Config, error) {
 	v.SetDefault("log-level", "info")
 
 	// Environment variables
-	v.SetEnvPrefix("LOTTY")
+	v.SetEnvPrefix("")
 	v.AutomaticEnv()
 	v.BindEnv("loki-endpoint", "LOKI_ENDPOINT")
 	v.BindEnv("loki-username", "LOKI_USERNAME")
