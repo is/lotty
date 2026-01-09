@@ -1,2 +1,5 @@
 # CNB runtime files
 .run/
+
+# Sensitive files
+lokienv
