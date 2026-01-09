@@ -1,6 +1,6 @@
-# Loky
+# Lotty
 
-Loky是一个将命令输出通过HTTP API发送到Grafana Loki的Go程序，支持PTY能力、内存缓存和批量发送。
+Lotty是一个将命令输出通过HTTP API发送到Grafana Loki的Go程序，支持PTY能力、内存缓存和批量发送。
 
 ## 特性
 
@@ -17,19 +17,19 @@ Loky是一个将命令输出通过HTTP API发送到Grafana Loki的Go程序，支
 ### 从源码构建
 
 ```bash
-git clone https://github.com/yourname/loky.git
-cd loky
+git clone https://github.com/yourname/lotty.git
+cd lotty
 make build
 ```
 
 ### 使用Docker
 
 ```bash
-docker build -t loky:latest .
+docker build -t lotty:latest .
 docker run -e LOKI_ENDPOINT=http://loki:3100 \
            -e LOKI_USERNAME=admin \
            -e LOKI_PASSWORD=password \
-           loky:latest -- your-command
+           lotty:latest -- your-command
 ```
 
 ## 配置
@@ -54,10 +54,10 @@ docker run -e LOKI_ENDPOINT=http://loki:3100 \
 ### 命令行参数
 
 ```bash
-loky [flags] -- command [args...]
+lotty [flags] -- command [args...]
 
 Flags:
-  --config string       配置文件 (默认是 $HOME/.loky.yaml)
+  --config string       配置文件 (默认是 $HOME/.lotty.yaml)
   --input-mode string   输入模式 (pty, pipe) (默认 "pty")
   --log-level string    日志级别 (debug, info, warn, error) (默认 "info")
   -h, --help           显示帮助信息
@@ -75,21 +75,21 @@ export LOKI_PASSWORD="password"
 export LOKI_LABELS="service=myapp,env=prod"
 
 # 发送ping输出到Loki
-loky -- ping google.com
+lotty -- ping google.com
 ```
 
 ### 使用管道模式
 
 ```bash
 # 监控日志文件
-loky --input-mode pipe -- tail -f /var/log/app.log
+lotty --input-mode pipe -- tail -f /var/log/app.log
 ```
 
 ### 使用PTY模式（默认）
 
 ```bash
 # 监控应用程序输出（支持彩色输出和交互式程序）
-loky -- my-app --arg1 --arg2
+lotty -- my-app --arg1 --arg2
 ```
 
 ## 架构
@@ -141,8 +141,8 @@ make build-all
 ## 项目结构
 
 ```
-loky/
-├── cmd/loky/main.go          # 主入口
+lotty/
+├── cmd/lotty/main.go          # 主入口
 ├── internal/
 │   ├── config/              # 配置管理
 │   ├── input/               # 输入处理（pty + reader）

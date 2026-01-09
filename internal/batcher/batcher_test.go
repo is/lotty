@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/yourname/loky/internal/buffer"
-	"github.com/yourname/loky/internal/loki"
-	"github.com/yourname/loky/pkg/types"
+	"github.com/yourname/lotty/internal/buffer"
+	"github.com/yourname/lotty/internal/loki"
+	"github.com/yourname/lotty/pkg/types"
 )
 
 type trackingLogger struct {

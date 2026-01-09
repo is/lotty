@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/yourname/loky/pkg/types"
+	"github.com/yourname/lotty/pkg/types"
 )
 
 func TestSplitLines(t *testing.T) {

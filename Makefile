@@ -1,7 +1,7 @@
 .PHONY: build clean test lint install-deps run fmt vet
 
 # Binary name
-BINARY_NAME=loky
+BINARY_NAME=lotty
 
 # Build directory
 BUILD_DIR=bin
@@ -27,15 +27,15 @@ all: clean test build
 build:
 	@echo "Building $(BINARY_NAME)..."
 	@mkdir -p $(BUILD_DIR)
-	$(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/loky
+	$(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/lotty
 	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)"
 
 build-all: build
 	@echo "Building for multiple platforms..."
-	GOOS=linux GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 ./cmd/loky
-	GOOS=darwin GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64 ./cmd/loky
-	GOOS=darwin GOARCH=arm64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64 ./cmd/loky
-	GOOS=windows GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe ./cmd/loky
+	GOOS=linux GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 ./cmd/lotty
+	GOOS=darwin GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64 ./cmd/lotty
+	GOOS=darwin GOARCH=arm64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64 ./cmd/lotty
+	GOOS=windows GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe ./cmd/lotty
 	@echo "Cross-build complete"
 
 clean:
@@ -84,7 +84,7 @@ install-deps:
 
 run:
 	@echo "Running $(BINARY_NAME)..."
-	$(GOBUILD) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/loky
+	$(GOBUILD) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/lotty
 	$(BUILD_DIR)/$(BINARY_NAME)
 
 docker-build:

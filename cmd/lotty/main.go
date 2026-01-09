@@ -9,11 +9,11 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/yourname/loky/internal/batcher"
-	"github.com/yourname/loky/internal/buffer"
-	"github.com/yourname/loky/internal/config"
-	"github.com/yourname/loky/internal/input"
-	"github.com/yourname/loky/internal/loki"
+	"github.com/yourname/lotty/internal/batcher"
+	"github.com/yourname/lotty/internal/buffer"
+	"github.com/yourname/lotty/internal/config"
+	"github.com/yourname/lotty/internal/input"
+	"github.com/yourname/lotty/internal/loki"
 )
 
 var (
@@ -23,20 +23,20 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "loky",
+	Use:   "lotty",
 	Short: "A tool to send command output to Grafana Loki",
-	Long: `Loky is a tool that captures command output and sends it to Grafana Loki
+	Long: `Lotty is a tool that captures command output and sends it to Grafana Loki
 via HTTP API. It supports PTY mode, in-memory buffering, and batch sending.`,
 	Example: `  # Send ping output to Loki
-  loky -- ping google.com
+  lotty -- ping google.com
 
   # Use pipe mode
-  loky --input-mode pipe -- tail -f /var/log/app.log`,
+  lotty --input-mode pipe -- tail -f /var/log/app.log`,
 	RunE: run,
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.loky.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.lotty.yaml)")
 	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", "log level (debug, info, warn, error)")
 	rootCmd.PersistentFlags().StringVar(&inputMode, "input-mode", "pty", "input mode (pty, pipe)")
 }
@@ -75,7 +75,7 @@ func run(cmd *cobra.Command, args []string) error {
 
 	// Setup logger
 	logger := setupLogger(cfg.LogLevel)
-	logger.Infof("Starting loky with input mode: %s", cfg.InputMode)
+	logger.Infof("Starting lotty with input mode: %s", cfg.InputMode)
 	logger.Infof("Loki endpoint: %s", cfg.LokiEndpoint)
 	logger.Infof("Buffer size: %d", cfg.BufferSize)
 	logger.Infof("Batch interval: %v", cfg.BatchInterval)
@@ -149,7 +149,7 @@ func run(cmd *cobra.Command, args []string) error {
 
 	case sig := <-sigChan:
 		logger.Infof("Received signal: %v", sig)
-		logger.Infof("Stopping loky...")
+		logger.Infof("Stopping lotty...")
 
 		// Flush remaining logs
 		b.Flush()
@@ -171,7 +171,7 @@ func run(cmd *cobra.Command, args []string) error {
 	logger.Infof("  Dequeued: %d", stats.Dequeued)
 	logger.Infof("  Dropped: %d", stats.Dropped)
 
-	logger.Infof("Loky stopped")
+	logger.Infof("Lotty stopped")
 
 	return nil
 }

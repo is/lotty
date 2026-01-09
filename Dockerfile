@@ -19,8 +19,8 @@ COPY . .
 # Build the binary
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags="-w -s" \
-    -o /app/loky \
-    ./cmd/loky
+    -o /app/lotty \
+    ./cmd/lotty
 
 # Final stage
 FROM alpine:latest
@@ -32,10 +32,10 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /app
 
 # Copy binary from builder
-COPY --from=builder /app/loky /app/loky
+COPY --from=builder /app/lotty /app/lotty
 
 # Set entrypoint
-ENTRYPOINT ["/app/loky"]
+ENTRYPOINT ["/app/lotty"]
 
 # Default command shows help
 CMD ["--help"]

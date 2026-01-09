@@ -1,9 +1,9 @@
-# TODO.md - Loky开发任务清单
+# TODO.md - Lotty开发任务清单
 
 ## 阶段一：基础设施搭建
 
 ### 1.1 项目初始化
-- [ ] 初始化Go模块 `go mod init github.com/yourname/loky`
+- [ ] 初始化Go模块 `go mod init github.com/yourname/lotty`
 - [ ] 创建项目目录结构（已完成）
 - [ ] 配置Makefile
 - [ ] 创建Dockerfile
@@ -83,7 +83,7 @@
 
 ## 阶段三：主程序集成
 
-### 3.1 命令行接口 (cmd/loky/main.go)
+### 3.1 命令行接口 (cmd/lotty/main.go)
 - [ ] 实现Cobra命令定义
 - [ ] 实现主入口函数
 - [ ] 实现命令执行逻辑

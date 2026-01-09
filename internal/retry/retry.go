@@ -6,7 +6,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/yourname/loky/pkg/types"
+	"github.com/yourname/lotty/pkg/types"
 )
 
 // RetryConfig holds the retry configuration

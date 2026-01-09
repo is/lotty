@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
-	"github.com/yourname/loky/pkg/types"
+	"github.com/yourname/lotty/pkg/types"
 )
 
 // RingBuffer implements a thread-safe ring buffer for log entries

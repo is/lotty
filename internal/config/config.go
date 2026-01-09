@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yourname/loky/pkg/types"
+	"github.com/yourname/lotty/pkg/types"
 	"github.com/spf13/viper"
 )
 
@@ -23,7 +23,7 @@ func LoadConfig() (*types.Config, error) {
 	v.SetDefault("log-level", "info")
 
 	// Environment variables
-	v.SetEnvPrefix("LOKY")
+	v.SetEnvPrefix("LOTTY")
 	v.AutomaticEnv()
 	v.BindEnv("loki-endpoint", "LOKI_ENDPOINT")
 	v.BindEnv("loki-username", "LOKI_USERNAME")

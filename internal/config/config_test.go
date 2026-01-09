@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yourname/loky/pkg/types"
+	"github.com/yourname/lotty/pkg/types"
 )
 
 func TestParseLabels(t *testing.T) {

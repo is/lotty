@@ -1,15 +1,15 @@
-# AGENTS.md - Loky程序开发指南
+# AGENTS.md - Lotty程序开发指南
 
 ## 项目概述
 
-loky是一个将命令输出通过HTTP API发送到Grafana Loki的Go程序，支持pty能力、内存缓存和批量发送。
+lotty是一个将命令输出通过HTTP API发送到Grafana Loki的Go程序，支持pty能力、内存缓存和批量发送。
 
 ## 核心技术架构
 
 ### 1. 组件结构
 ```
-loky/
-├── cmd/loky/main.go          # 主入口
+lotty/
+├── cmd/lotty/main.go          # 主入口
 ├── internal/
 │   ├── config/              # 配置管理
 │   │   └── config.go
@@ -51,10 +51,10 @@ loky/
 ### 项目初始化
 ```bash
 # 创建项目结构
-mkdir -p cmd/loky internal/{config,input,buffer,loki,batcher,retry} pkg/types
+mkdir -p cmd/lotty internal/{config,input,buffer,loki,batcher,retry} pkg/types
 
 # 初始化Go模块
-go mod init github.com/yourname/loky
+go mod init github.com/yourname/lotty
 
 # 安装依赖
 go get github.com/creack/pty
@@ -98,7 +98,7 @@ go get github.com/spf13/viper
 
 ### 命令行参数
 ```bash
-loky [flags] -- command [args...]
+lotty [flags] -- command [args...]
 
 Flags:
   --loki-endpoint string      Loki服务地址 (env: LOKI_ENDPOINT)
@@ -162,13 +162,13 @@ make lint
 ### Docker构建
 ```bash
 # 构建Docker镜像
-docker build -t loky:latest .
+docker build -t lotty:latest .
 
 # 运行容器
 docker run -e LOKI_ENDPOINT=http://loki:3100 \
            -e LOKI_USERNAME=admin \
            -e LOKI_PASSWORD=password \
-           loky:latest -- your-command
+           lotty:latest -- your-command
 ```
 
 ### Release发布

@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/yourname/loky/internal/buffer"
-	"github.com/yourname/loky/internal/loki"
-	"github.com/yourname/loky/pkg/types"
+	"github.com/yourname/lotty/internal/buffer"
+	"github.com/yourname/lotty/internal/loki"
+	"github.com/yourname/lotty/pkg/types"
 )
 
 // Batcher handles batching and sending log entries to Loki

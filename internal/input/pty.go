@@ -9,7 +9,7 @@ import (
 
 	"github.com/creack/pty"
 	"github.com/sirupsen/logrus"
-	"github.com/yourname/loky/pkg/types"
+	"github.com/yourname/lotty/pkg/types"
 )
 
 // PTYHandler handles PTY-based command execution and output capture
