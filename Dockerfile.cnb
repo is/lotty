@@ -2,7 +2,8 @@
 FROM golang:1.24.4-alpine AS builder
 
 # Install build dependencies
-RUN apk add --no-cache git ca-certificates
+RUN sed -i 's@dl-cdn.alpinelinux.org@mirrors.cloud.tencent.com@g' /etc/apk/repositories && \
+    apk add --no-cache git ca-certificates
 
 # Set working directory
 WORKDIR /build
@@ -23,19 +24,8 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     ./cmd/lotty
 
 # Final stage
-FROM alpine:latest
-
-# Install ca-certificates for HTTPS
-RUN apk --no-cache add ca-certificates
-
-# Set working directory
-WORKDIR /app
+FROM scratch
 
 # Copy binary from builder
-COPY --from=builder /app/lotty /app/lotty
+COPY --from=builder /app/lotty /
 
-# Set entrypoint
-ENTRYPOINT ["/app/lotty"]
-
-# Default command shows help
-CMD ["--help"]

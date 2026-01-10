@@ -16,3 +16,24 @@ $:
             - https://cnb.cool/io8/secrets/-/blob/main/zero.yml
           script: |
             sh -c "$BOOT"
+
+main:
+  push:
+    pipeline0:
+      docker:
+        image: docker.cnb.cool/boot-io/ws:code-agent
+      runner:
+        cpus: 4
+      services:
+        - docker
+      stages:
+        - name: build lotty
+          script: |
+            docker buildx build -o type=local,dest=./out -f Dockerfile.cnb .
+        - name: attach assets
+          image: cnbcool/attachments:latest
+          settings:
+            tag: alpha
+            attachments:
+              - ./out/lotty
+      
