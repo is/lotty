@@ -177,6 +177,28 @@ func run(cmd *cobra.Command, args []string) error {
 		logger.WithField("signal", sig).Info("Received signal")
 		logger.Info("Stopping lotty...")
 
+		// Stop the command process gracefully
+		if err := handler.Stop(); err != nil {
+			logger.WithError(err).Warn("Failed to stop command gracefully")
+		}
+
+		// Wait for a short time to allow graceful shutdown
+		shutdownDone := make(chan struct{}, 1)
+		go func() {
+			if err := handler.Wait(); err != nil {
+				logger.WithError(err).Debug("Command exit status after stop")
+			}
+			close(shutdownDone)
+		}()
+
+		select {
+		case <-shutdownDone:
+			logger.Debug("Command stopped gracefully")
+		case <-time.After(5 * time.Second):
+			logger.Warn("Command did not stop gracefully, force close")
+			handler.Close()
+		}
+
 		// Flush remaining logs before stopping
 		b.Flush()
 		logger.Debugf("Flushed remaining logs")

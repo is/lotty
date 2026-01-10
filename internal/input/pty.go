@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 
 	"github.com/creack/pty"
 	"github.com/sirupsen/logrus"
@@ -73,6 +74,19 @@ func (p *PTYHandler) Wait() error {
 func (p *PTYHandler) Close() error {
 	if p.pty != nil {
 		return p.pty.Close()
+	}
+	return nil
+}
+
+// Stop gracefully stops the command by sending SIGTERM
+func (p *PTYHandler) Stop() error {
+	if p.cmd.Process != nil {
+		p.logger.Info("Sending SIGTERM to command process")
+		if err := p.cmd.Process.Signal(syscall.SIGTERM); err != nil {
+			p.logger.WithError(err).Warn("Failed to send SIGTERM, trying SIGKILL")
+			// If SIGTERM fails, try SIGKILL
+			return p.cmd.Process.Kill()
+		}
 	}
 	return nil
 }
@@ -226,6 +240,19 @@ func (p *PipeHandler) Close() error {
 	return err
 }
 
+// Stop gracefully stops the command by sending SIGTERM
+func (p *PipeHandler) Stop() error {
+	if p.cmd.Process != nil {
+		p.logger.Info("Sending SIGTERM to command process")
+		if err := p.cmd.Process.Signal(syscall.SIGTERM); err != nil {
+			p.logger.WithError(err).Warn("Failed to send SIGTERM, trying SIGKILL")
+			// If SIGTERM fails, try SIGKILL
+			return p.cmd.Process.Kill()
+		}
+	}
+	return nil
+}
+
 // readFromPipe reads output from a pipe
 func (p *PipeHandler) readFromPipe(pipe io.Reader, name string) {
 	reader := NewReader(pipe, p.output, p.logger)
@@ -265,4 +292,5 @@ type CommandHandler interface {
 	Start() error
 	Wait() error
 	Close() error
+	Stop() error
 }
