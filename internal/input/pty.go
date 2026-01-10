@@ -22,6 +22,7 @@ type PTYHandler struct {
 	echo    bool
 	ptyRows int
 	ptyCols int
+	done    chan struct{}
 }
 
 // NewPTYHandler creates a new PTYHandler
@@ -33,6 +34,7 @@ func NewPTYHandler(cmd *exec.Cmd, output chan<- string, logger *logrus.Logger, e
 		echo:    echo,
 		ptyRows: 24,
 		ptyCols: 80,
+		done:    make(chan struct{}),
 	}
 }
 
@@ -51,7 +53,7 @@ func (p *PTYHandler) Start() error {
 	}
 	p.pty = ptyFile
 
-	// Set PTY size
+	// Set PTY size (failure is non-critical, but log it)
 	if err := pty.Setsize(ptyFile, &pty.Winsize{
 		Rows: uint16(p.ptyRows),
 		Cols: uint16(p.ptyCols),
@@ -59,7 +61,7 @@ func (p *PTYHandler) Start() error {
 		p.logger.Debugf("Failed to set PTY size: %v", err)
 	}
 
-	// Start reading from PTY
+	// Start reading from PTY in a goroutine
 	go p.readFromPTY()
 
 	return nil
@@ -70,10 +72,16 @@ func (p *PTYHandler) Wait() error {
 	return p.cmd.Wait()
 }
 
-// Close closes the PTY
+// Close closes the PTY and signals the read goroutine to stop
 func (p *PTYHandler) Close() error {
+	// Signal the read goroutine to stop
+	close(p.done)
+	
 	if p.pty != nil {
-		return p.pty.Close()
+		if err := p.pty.Close(); err != nil {
+			return err
+		}
+		p.pty = nil
 	}
 	return nil
 }
@@ -93,8 +101,24 @@ func (p *PTYHandler) Stop() error {
 
 // readFromPTY reads output from the PTY
 func (p *PTYHandler) readFromPTY() {
+	defer func() {
+		// Ensure PTY is closed when goroutine exits
+		if p.pty != nil {
+			p.pty.Close()
+			p.pty = nil
+		}
+	}()
+
 	buf := make([]byte, 1024)
 	for {
+		select {
+		case <-p.done:
+			// Signal to stop reading
+			return
+		default:
+			// Continue reading
+		}
+
 		n, err := p.pty.Read(buf)
 		if err != nil {
 			// PTY read errors are common when the command completes
@@ -122,14 +146,13 @@ func (p *PTYHandler) readFromPTY() {
 				case p.output <- line:
 					// Send successful
 				default:
-					// Channel closed or full, skip this line
-					p.logger.Debugf("Output channel closed or full, skipping line")
-					return
-					}
-					// Also print to stdout if echo mode is enabled
-					if p.echo {
-						fmt.Println(line)
-					}
+					// Channel full, log warning but continue
+					p.logger.Warn("Output channel full, skipping line (data may be lost)")
+				}
+				// Also print to stdout if echo mode is enabled
+				if p.echo {
+					fmt.Println(line)
+				}
 			}
 		}
 	}
@@ -154,22 +177,26 @@ func isExpectedPTYError(err error) bool {
 		strings.Contains(errStr, "operation not permitted")
 }
 
-// SplitLines splits text into lines
+// SplitLines splits text into lines efficiently using strings.Builder
 func SplitLines(text string) []string {
-	lines := []string{}
-	current := ""
-	for _, ch := range text {
+	lines := make([]string, 0)
+	var builder strings.Builder
+
+	for i := 0; i < len(text); i++ {
+		ch := text[i]
 		if ch == '\n' {
-			lines = append(lines, current)
-			current = ""
+			lines = append(lines, builder.String())
+			builder.Reset()
 		} else if ch != '\r' {
-			current += string(ch)
+			builder.WriteByte(ch)
 		}
 	}
+
 	// Add remaining text if exists
-	if current != "" {
-		lines = append(lines, current)
+	if builder.Len() > 0 {
+		lines = append(lines, builder.String())
 	}
+
 	return lines
 }
 
@@ -181,6 +208,7 @@ type PipeHandler struct {
 	stdout io.ReadCloser
 	stderr io.ReadCloser
 	echo   bool
+	done   chan struct{}
 }
 
 // NewPipeHandler creates a new PipeHandler
@@ -190,6 +218,7 @@ func NewPipeHandler(cmd *exec.Cmd, output chan<- string, logger *logrus.Logger, 
 		output: output,
 		logger: logger,
 		echo:   echo,
+		done:   make(chan struct{}),
 	}
 }
 
@@ -224,8 +253,11 @@ func (p *PipeHandler) Wait() error {
 	return p.cmd.Wait()
 }
 
-// Close closes the pipes
+// Close closes the pipes and signals goroutines to stop
 func (p *PipeHandler) Close() error {
+	// Signal the read goroutines to stop
+	close(p.done)
+
 	var err error
 	if p.stdout != nil {
 		if cerr := p.stdout.Close(); cerr != nil {
@@ -255,7 +287,7 @@ func (p *PipeHandler) Stop() error {
 
 // readFromPipe reads output from a pipe
 func (p *PipeHandler) readFromPipe(pipe io.Reader, name string) {
-	reader := NewReader(pipe, p.output, p.logger, p.echo)
+	reader := NewReader(pipe, p.output, p.logger, p.echo, p.done)
 	if err := reader.Start(); err != nil {
 		p.logger.Errorf("Error reading from %s: %v", name, err)
 	}

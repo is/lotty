@@ -98,7 +98,11 @@ func (c *Client) Push(streams []types.LokiStream) error {
 		}
 		return fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		// Drain response body to ensure connection can be reused
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+	}()
 
 	// Read response body
 	body, err := io.ReadAll(resp.Body)

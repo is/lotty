@@ -109,7 +109,25 @@ func (rb *RingBuffer) DequeueBatch(n int) []types.LogEntry {
 
 // DequeueAll removes and returns all log entries from the buffer
 func (rb *RingBuffer) DequeueAll() []types.LogEntry {
-	return rb.DequeueBatch(rb.Size())
+	rb.mu.Lock()
+	defer rb.mu.Unlock()
+
+	n := rb.size
+	if n == 0 {
+		return []types.LogEntry{}
+	}
+
+	entries := make([]types.LogEntry, n)
+	for i := 0; i < n; i++ {
+		entries[i] = rb.buffer[rb.head]
+		rb.buffer[rb.head] = types.LogEntry{}
+		rb.head = (rb.head + 1) % rb.capacity
+	}
+
+	rb.size = 0
+	rb.stats.Dequeued += int64(n)
+
+	return entries
 }
 
 // Size returns the current number of entries in the buffer

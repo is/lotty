@@ -16,30 +16,46 @@ type Reader struct {
 	output  chan<- string
 	logger  *logrus.Logger
 	echo    bool
+	done    <-chan struct{}
 }
 
 // NewReader creates a new Reader
-func NewReader(reader io.Reader, output chan<- string, logger *logrus.Logger, echo bool) *Reader {
+func NewReader(reader io.Reader, output chan<- string, logger *logrus.Logger, echo bool, done <-chan struct{}) *Reader {
 	return &Reader{
 		reader:  reader,
 		scanner: bufio.NewScanner(reader),
 		output:  output,
 		logger:  logger,
 		echo:    echo,
+		done:    done,
 	}
 }
 
 // Start begins reading from the reader
 func (r *Reader) Start() error {
-	for r.scanner.Scan() {
+	for {
+		select {
+		case <-r.done:
+			// Signal to stop reading
+			return nil
+		default:
+			// Continue reading
+		}
+
+		if !r.scanner.Scan() {
+			break
+		}
 		line := r.scanner.Text()
 		// Send to output channel (for Loki)
 		select {
 		case r.output <- line:
 			// Send successful
+		case <-r.done:
+			// Signal to stop reading
+			return nil
 		default:
-			// Channel closed or full, skip this line
-			return fmt.Errorf("output channel closed or full")
+			// Channel full, log warning but continue
+			r.logger.Warn("Output channel full, skipping line (data may be lost)")
 		}
 		// Also print to stdout if echo mode is enabled
 		if r.echo {

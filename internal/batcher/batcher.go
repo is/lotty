@@ -163,6 +163,7 @@ func (b *Batcher) sendBatch(entries []types.LogEntry) error {
 	if err != nil {
 		b.mu.Lock()
 		b.metrics.HTTPFailures++
+		b.metrics.MessagesDropped += int64(len(entries))
 		b.mu.Unlock()
 		return err
 	}
