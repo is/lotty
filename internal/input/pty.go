@@ -71,8 +71,17 @@ func (p *PTYHandler) readFromPTY() {
 	for {
 		n, err := p.pty.Read(buf)
 		if err != nil {
+			// "input/output error" is common when the command completes quickly
+			// and the PTY is closed. This is not a real error.
 			if err != io.EOF {
-				p.logger.Errorf("Error reading from PTY: %v", err)
+				// Check if it's the common PTY I/O error that occurs on normal exit
+				errStr := err.Error()
+				if errStr == "read /dev/ptmx: input/output error" ||
+				   errStr == "input/output error" {
+					p.logger.Debugf("PTY closed (command completed)")
+				} else {
+					p.logger.Errorf("Error reading from PTY: %v", err)
+				}
 			}
 			return
 		}
