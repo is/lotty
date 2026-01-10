@@ -19,18 +19,18 @@ type PTYHandler struct {
 	pty     *os.File
 	output  chan<- string
 	logger  *logrus.Logger
-	quiet   bool
+	echo    bool
 	ptyRows int
 	ptyCols int
 }
 
 // NewPTYHandler creates a new PTYHandler
-func NewPTYHandler(cmd *exec.Cmd, output chan<- string, logger *logrus.Logger, quiet bool) *PTYHandler {
+func NewPTYHandler(cmd *exec.Cmd, output chan<- string, logger *logrus.Logger, echo bool) *PTYHandler {
 	return &PTYHandler{
 		cmd:     cmd,
 		output:  output,
 		logger:  logger,
-		quiet:   quiet,
+		echo:    echo,
 		ptyRows: 24,
 		ptyCols: 80,
 	}
@@ -125,11 +125,11 @@ func (p *PTYHandler) readFromPTY() {
 					// Channel closed or full, skip this line
 					p.logger.Debugf("Output channel closed or full, skipping line")
 					return
-				}
-				// Also print to stdout unless in quiet mode
-				if !p.quiet {
-					fmt.Println(line)
-				}
+					}
+					// Also print to stdout if echo mode is enabled
+					if p.echo {
+						fmt.Println(line)
+					}
 			}
 		}
 	}
@@ -180,16 +180,16 @@ type PipeHandler struct {
 	logger *logrus.Logger
 	stdout io.ReadCloser
 	stderr io.ReadCloser
-	quiet  bool
+	echo   bool
 }
 
 // NewPipeHandler creates a new PipeHandler
-func NewPipeHandler(cmd *exec.Cmd, output chan<- string, logger *logrus.Logger, quiet bool) *PipeHandler {
+func NewPipeHandler(cmd *exec.Cmd, output chan<- string, logger *logrus.Logger, echo bool) *PipeHandler {
 	return &PipeHandler{
 		cmd:    cmd,
 		output: output,
 		logger: logger,
-		quiet:  quiet,
+		echo:   echo,
 	}
 }
 
@@ -256,7 +256,7 @@ func (p *PipeHandler) Stop() error {
 // readFromPipe reads output from a pipe
 func (p *PipeHandler) readFromPipe(pipe io.Reader, name string) {
 	reader := NewReader(pipe, p.output, p.logger)
-	reader.SetQuiet(p.quiet)
+	reader.SetEcho(p.echo)
 	if err := reader.Start(); err != nil {
 		p.logger.Errorf("Error reading from %s: %v", name, err)
 	}
@@ -268,18 +268,18 @@ func CreateCommand(cfg *types.Config) *exec.Cmd {
 }
 
 // RunCommand runs a command with the specified mode
-func RunCommand(cfg *types.Config, output chan<- string, logger *logrus.Logger, quiet bool) (CommandHandler, error) {
+func RunCommand(cfg *types.Config, output chan<- string, logger *logrus.Logger, echo bool) (CommandHandler, error) {
 	cmd := CreateCommand(cfg)
 
 	if cfg.InputMode == "pty" {
-		handler := NewPTYHandler(cmd, output, logger, quiet)
+		handler := NewPTYHandler(cmd, output, logger, echo)
 		handler.SetPTYSize(cfg.PTYRows, cfg.PTYCols)
 		if err := handler.Start(); err != nil {
 			return nil, err
 		}
 		return handler, nil
 	} else {
-		handler := NewPipeHandler(cmd, output, logger, quiet)
+		handler := NewPipeHandler(cmd, output, logger, echo)
 		if err := handler.Start(); err != nil {
 			return nil, err
 		}

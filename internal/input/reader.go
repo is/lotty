@@ -15,7 +15,7 @@ type Reader struct {
 	scanner *bufio.Scanner
 	output  chan<- string
 	logger  *logrus.Logger
-	quiet   bool
+	echo    bool
 }
 
 // NewReader creates a new Reader
@@ -28,9 +28,9 @@ func NewReader(reader io.Reader, output chan<- string, logger *logrus.Logger) *R
 	}
 }
 
-// SetQuiet sets the quiet mode for the reader
-func (r *Reader) SetQuiet(quiet bool) {
-	r.quiet = quiet
+// SetEcho sets the echo mode for the reader
+func (r *Reader) SetEcho(echo bool) {
+	r.echo = echo
 }
 
 // Start begins reading from the reader
@@ -45,8 +45,8 @@ func (r *Reader) Start() error {
 			// Channel closed or full, skip this line
 			return fmt.Errorf("output channel closed or full")
 		}
-		// Also print to stdout unless in quiet mode
-		if !r.quiet {
+		// Also print to stdout if echo mode is enabled
+		if r.echo {
 			fmt.Println(line)
 		}
 	}
