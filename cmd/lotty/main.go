@@ -20,6 +20,7 @@ var (
 	cfgFile    string
 	logLevel   string
 	inputMode  string
+	quiet      bool
 )
 
 var rootCmd = &cobra.Command{
@@ -39,6 +40,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.lotty.yaml)")
 	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", "log level (debug, info, warn, error)")
 	rootCmd.PersistentFlags().StringVar(&inputMode, "input-mode", "pty", "input mode (pty, pipe)")
+	rootCmd.PersistentFlags().BoolVar(&quiet, "quiet", false, "suppress command output to stdout")
 }
 
 func main() {
@@ -112,7 +114,7 @@ func run(cmd *cobra.Command, args []string) error {
 	b.MonitorStats(30 * time.Second)
 
 	// Run command
-	handler, err := input.RunCommand(cfg, inputChan, logger)
+	handler, err := input.RunCommand(cfg, inputChan, logger, quiet)
 	if err != nil {
 		return fmt.Errorf("failed to run command: %w", err)
 	}

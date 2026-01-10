@@ -118,7 +118,7 @@ func TestPTYHandler(t *testing.T) {
 	logger := logrus.New()
 	output := make(chan string, 10)
 
-	handler := NewPTYHandler(CreateCommand(cfg), output, logger)
+	handler := NewPTYHandler(CreateCommand(cfg), output, logger, false)
 
 	// Note: PTY tests may not work in all environments
 	// This is a basic structure test
@@ -140,7 +140,7 @@ func TestPipeHandler(t *testing.T) {
 	logger := logrus.New()
 	output := make(chan string, 10)
 
-	handler := NewPipeHandler(CreateCommand(cfg), output, logger)
+	handler := NewPipeHandler(CreateCommand(cfg), output, logger, false)
 
 	if handler == nil {
 		t.Fatal("Expected non-nil handler")
@@ -182,7 +182,7 @@ func TestRunCommand_PipeMode(t *testing.T) {
 	logger.SetLevel(logrus.ErrorLevel)
 	output := make(chan string, 10)
 
-	handler, err := RunCommand(cfg, output, logger)
+	handler, err := RunCommand(cfg, output, logger, false)
 	if err != nil {
 		t.Fatalf("RunCommand() error = %v", err)
 	}
@@ -211,7 +211,7 @@ func TestCommandHandler_Interface(t *testing.T) {
 	logger.SetLevel(logrus.ErrorLevel)
 	output := make(chan string, 10)
 
-	handler, err := RunCommand(cfg, output, logger)
+	handler, err := RunCommand(cfg, output, logger, false)
 	if err != nil {
 		t.Fatalf("RunCommand() error = %v", err)
 	}
@@ -243,7 +243,7 @@ func TestMonitorCommand(t *testing.T) {
 	output := make(chan string, 100)
 
 	// Start the monitor
-	errChan := MonitorCommand(cfg, output, logger)
+	errChan := MonitorCommand(cfg, output, logger, false)
 
 	// Wait for output from the command (should appear quickly)
 	select {

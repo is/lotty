@@ -1,6 +1,7 @@
 package input
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -18,14 +19,16 @@ type PTYHandler struct {
 	pty    *os.File
 	output chan<- string
 	logger *logrus.Logger
+	quiet  bool
 }
 
 // NewPTYHandler creates a new PTYHandler
-func NewPTYHandler(cmd *exec.Cmd, output chan<- string, logger *logrus.Logger) *PTYHandler {
+func NewPTYHandler(cmd *exec.Cmd, output chan<- string, logger *logrus.Logger, quiet bool) *PTYHandler {
 	return &PTYHandler{
 		cmd:    cmd,
 		output: output,
 		logger: logger,
+		quiet:  quiet,
 	}
 }
 
@@ -91,7 +94,12 @@ func (p *PTYHandler) readFromPTY() {
 		lines := SplitLines(text)
 		for _, line := range lines {
 			if line != "" {
+				// Send to output channel (for Loki)
 				p.output <- line
+				// Also print to stdout unless in quiet mode
+				if !p.quiet {
+					fmt.Println(line)
+				}
 			}
 		}
 	}
@@ -123,14 +131,16 @@ type PipeHandler struct {
 	logger *logrus.Logger
 	stdout io.ReadCloser
 	stderr io.ReadCloser
+	quiet  bool
 }
 
 // NewPipeHandler creates a new PipeHandler
-func NewPipeHandler(cmd *exec.Cmd, output chan<- string, logger *logrus.Logger) *PipeHandler {
+func NewPipeHandler(cmd *exec.Cmd, output chan<- string, logger *logrus.Logger, quiet bool) *PipeHandler {
 	return &PipeHandler{
 		cmd:    cmd,
 		output: output,
 		logger: logger,
+		quiet:  quiet,
 	}
 }
 
@@ -184,6 +194,7 @@ func (p *PipeHandler) Close() error {
 // readFromPipe reads output from a pipe
 func (p *PipeHandler) readFromPipe(pipe io.Reader, name string) {
 	reader := NewReader(pipe, p.output, p.logger)
+	reader.SetQuiet(p.quiet)
 	if err := reader.Start(); err != nil {
 		p.logger.Errorf("Error reading from %s: %v", name, err)
 	}
@@ -195,17 +206,17 @@ func CreateCommand(cfg *types.Config) *exec.Cmd {
 }
 
 // RunCommand runs a command with the specified mode
-func RunCommand(cfg *types.Config, output chan<- string, logger *logrus.Logger) (CommandHandler, error) {
+func RunCommand(cfg *types.Config, output chan<- string, logger *logrus.Logger, quiet bool) (CommandHandler, error) {
 	cmd := CreateCommand(cfg)
 
 	if cfg.InputMode == "pty" {
-		handler := NewPTYHandler(cmd, output, logger)
+		handler := NewPTYHandler(cmd, output, logger, quiet)
 		if err := handler.Start(); err != nil {
 			return nil, err
 		}
 		return handler, nil
 	} else {
-		handler := NewPipeHandler(cmd, output, logger)
+		handler := NewPipeHandler(cmd, output, logger, quiet)
 		if err := handler.Start(); err != nil {
 			return nil, err
 		}
@@ -233,12 +244,12 @@ func KillProcessGroup(pid int) error {
 }
 
 // MonitorCommand monitors a command and restarts it if needed
-func MonitorCommand(cfg *types.Config, output chan<- string, logger *logrus.Logger) <-chan error {
+func MonitorCommand(cfg *types.Config, output chan<- string, logger *logrus.Logger, quiet bool) <-chan error {
 	errChan := make(chan error, 1)
 
 	go func() {
 		for {
-			handler, err := RunCommand(cfg, output, logger)
+			handler, err := RunCommand(cfg, output, logger, quiet)
 			if err != nil {
 				errChan <- err
 				return

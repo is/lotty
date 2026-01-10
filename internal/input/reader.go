@@ -2,6 +2,7 @@ package input
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"time"
 
@@ -13,6 +14,7 @@ type Reader struct {
 	reader io.Reader
 	output chan<- string
 	logger *logrus.Logger
+	quiet  bool
 }
 
 // NewReader creates a new Reader
@@ -24,12 +26,22 @@ func NewReader(reader io.Reader, output chan<- string, logger *logrus.Logger) *R
 	}
 }
 
+// SetQuiet sets the quiet mode for the reader
+func (r *Reader) SetQuiet(quiet bool) {
+	r.quiet = quiet
+}
+
 // Start begins reading from the reader
 func (r *Reader) Start() error {
 	scanner := bufio.NewScanner(r.reader)
 	for scanner.Scan() {
 		line := scanner.Text()
+		// Send to output channel (for Loki)
 		r.output <- line
+		// Also print to stdout unless in quiet mode
+		if !r.quiet {
+			fmt.Println(line)
+		}
 	}
 	if err := scanner.Err(); err != nil {
 		return err
