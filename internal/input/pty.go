@@ -255,8 +255,7 @@ func (p *PipeHandler) Stop() error {
 
 // readFromPipe reads output from a pipe
 func (p *PipeHandler) readFromPipe(pipe io.Reader, name string) {
-	reader := NewReader(pipe, p.output, p.logger)
-	reader.SetEcho(p.echo)
+	reader := NewReader(pipe, p.output, p.logger, p.echo)
 	if err := reader.Start(); err != nil {
 		p.logger.Errorf("Error reading from %s: %v", name, err)
 	}

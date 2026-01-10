@@ -19,18 +19,14 @@ type Reader struct {
 }
 
 // NewReader creates a new Reader
-func NewReader(reader io.Reader, output chan<- string, logger *logrus.Logger) *Reader {
+func NewReader(reader io.Reader, output chan<- string, logger *logrus.Logger, echo bool) *Reader {
 	return &Reader{
 		reader:  reader,
 		scanner: bufio.NewScanner(reader),
 		output:  output,
 		logger:  logger,
+		echo:    echo,
 	}
-}
-
-// SetEcho sets the echo mode for the reader
-func (r *Reader) SetEcho(echo bool) {
-	r.echo = echo
 }
 
 // Start begins reading from the reader

@@ -97,7 +97,7 @@ func TestReader_ReadLine_Timeout(t *testing.T) {
 	logger := logrus.New()
 	output := make(chan string, 10)
 
-	reader := NewReader(strings.NewReader("line1\nline2\n"), output, logger)
+	reader := NewReader(strings.NewReader("line1\nline2\n"), output, logger, false)
 
 	line, err := reader.ReadLine(1 * time.Second)
 	if err != nil {
