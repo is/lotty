@@ -1,18 +1,108 @@
-$:
-  vscode:
-    - docker:
-        image: docker.cnb.cool/boot-io/ws:code-agent
-      imports:
-        - https://cnb.cool/io8/secrets/-/blob/main/loki.yml
-        - https://cnb.cool/io8/secrets/-/blob/main/naco.yml
-      runner:
-        cpus: 8
-      services:
-        - vscode
-        - docker
-      stages:
-        - name: bootup
-          imports:
-            - https://cnb.cool/io8/secrets/-/blob/main/zero.yml
-          script: |
-            sh -c "$BOOT"
+version: "1.0"
+
+# 触发条件：每次push到go1分支时触发
+trigger:
+  push:
+    branches:
+      - "go1"
+      - "go1-*"
+
+# 构建配置
+build:
+  docker:
+    image: "golang:1.21-alpine"
+    build_args:
+      - "CGO_ENABLED=0"
+    commands:
+      - apk add --no-cache git make
+      - make build
+      - make test
+      - ls -lh bin/
+
+# 发布配置
+release:
+  # 发布到go1-alpha
+  target: "go1-alpha"
+  # Release名称模板，使用git tag或commit hash
+  name: "lotty-${{version}"
+  # 发布描述
+  description: |
+    Lotty - 命令输出转发到Grafana Loki工具
+
+    ## 功能特性
+    - PTY模式支持，完整模拟终端
+    - Pipe模式支持，标准输出捕获
+    - 内存环形缓冲，防止内存溢出
+    - 批量发送机制，优化HTTP请求
+    - 自动重试，提高可靠性
+    - Basic Auth认证支持
+    - 命令输出实时显示（默认）
+    - --quiet模式，静默命令输出
+    - 非错误日志调整为DEBUG级别
+
+    ## 快速开始
+    ```bash
+    # 配置Loki环境变量
+    export LOKI_ENDPOINT="https://your-loki-endpoint/loki/api/v1/push"
+    export LOKI_USERNAME="your-username"
+    export LOKI_PASSWORD="your-password"
+    export LOKI_LABELS="job=my-job,service_name=lotty,env=prod"
+
+    # 发送命令输出到Loki（默认显示输出）
+    lotty -- your-command arg1 arg2
+
+    # 使用quiet模式（不显示输出）
+    lotty --quiet -- long-running-command
+
+    # 查看详细日志
+    lotty --log-level debug -- your-command
+
+    # 查看帮助
+    lotty --help
+    ```
+
+    ## Docker使用
+    ```bash
+    docker run --rm \
+      -v $(pwd)/data:/app/data \
+      -e LOKI_ENDPOINT=$LOKI_ENDPOINT \
+      -e LOKI_USERNAME=$LOKI_USERNAME \
+      -e LOKI_PASSWORD=$LOKI_PASSWORD \
+      -e LOKI_LABELS="job=docker,service_name=lotty" \
+      ghcr.io/cnb/lotty:${{version}} \
+      -- ls -l /data
+    ```
+
+  # 发布的资产文件
+  assets:
+    # 使用attachments插件上传文件到release
+    plugin: public/cnbcool/attachments
+    files:
+      # 二进制文件
+      - path: bin/lotty
+        name: lotty-linux-amd64
+        type: binary
+        os: linux
+        arch: amd64
+        description: "Linux AMD64二进制文件"
+
+      # 文档
+      - path: README.md
+        name: README.md
+        type: document
+        description: "项目说明文档"
+
+      - path: AGENTS.md
+        name: AGENTS.md
+        type: document
+        description: "开发指南"
+
+      - path: Dockerfile
+        name: Dockerfile
+        type: dockerfile
+        description: "Docker构建配置"
+
+      - path: Makefile
+        name: Makefile
+        type: document
+        description: "构建脚本"
