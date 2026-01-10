@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yourname/lotty/pkg/types"
 	"github.com/spf13/viper"
+	"github.com/yourname/lotty/pkg/types"
 )
 
 // LoadConfig loads configuration from command line args, environment variables, and defaults
@@ -67,7 +67,7 @@ func LoadConfig(cfgFile string) (*types.Config, error) {
 		LogLevel:      v.GetString("log-level"),
 		PTYRows:       v.GetInt("pty-rows"),
 		PTYCols:       v.GetInt("pty-cols"),
-		TLSSkipVerify:  v.GetBool("tls-skip-verify"),
+		TLSSkipVerify: v.GetBool("tls-skip-verify"),
 	}
 
 	// Parse batch interval
@@ -102,18 +102,20 @@ func LoadConfig(cfgFile string) (*types.Config, error) {
 // - Label names must match the regex: [a-zA-Z_:][a-zA-Z0-9_:]*
 //   - Must start with a letter or underscore
 //   - Can contain letters, numbers, underscores, or colons
-// - Label values must be non-empty strings
-// - Avoid using reserved Loki label names like "level", "job", "instance"
-//   unless you specifically want to override them
+//   - Label values must be non-empty strings
+//   - Avoid using reserved Loki label names like "level", "job", "instance"
+//     unless you specifically want to override them
 //
 // Examples of valid labels:
-//   "service=api,env=production,version=1.0.0"
-//   "app=myapp,region=us-east-1"
+//
+//	"service=api,env=production,version=1.0.0"
+//	"app=myapp,region=us-east-1"
 //
 // Examples of invalid labels:
-//   "123label=value" (starts with a number)
-//   "label name=value" (contains spaces)
-//   "empty=" (empty value)
+//
+//	"123label=value" (starts with a number)
+//	"label name=value" (contains spaces)
+//	"empty=" (empty value)
 func parseLabels(labels string) map[string]string {
 	result := make(map[string]string)
 	pairs := strings.Split(labels, ",")

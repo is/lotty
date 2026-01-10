@@ -12,20 +12,20 @@ import (
 
 // Batcher handles batching and sending log entries to Loki
 type Batcher struct {
-	buffer         *buffer.RingBuffer
-	client         *loki.Client
-	labels         map[string]string
-	batchInterval  time.Duration
-	batchSize      int
-	retryCount     int
-	retryDelay     time.Duration
-	logger         Logger
-	ctx            context.Context
-	cancel         context.CancelFunc
-	wg             sync.WaitGroup
-	metrics        *types.Metrics
-	mu             sync.Mutex
-	forceSend      chan struct{}
+	buffer        *buffer.RingBuffer
+	client        *loki.Client
+	labels        map[string]string
+	batchInterval time.Duration
+	batchSize     int
+	retryCount    int
+	retryDelay    time.Duration
+	logger        Logger
+	ctx           context.Context
+	cancel        context.CancelFunc
+	wg            sync.WaitGroup
+	metrics       *types.Metrics
+	mu            sync.Mutex
+	forceSend     chan struct{}
 }
 
 // Logger interface for logging

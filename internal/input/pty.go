@@ -15,22 +15,22 @@ import (
 
 // PTYHandler handles PTY-based command execution and output capture
 type PTYHandler struct {
-	cmd      *exec.Cmd
-	pty      *os.File
-	output   chan<- string
-	logger    *logrus.Logger
-	quiet     bool
-	ptyRows   int
-	ptyCols   int
+	cmd     *exec.Cmd
+	pty     *os.File
+	output  chan<- string
+	logger  *logrus.Logger
+	quiet   bool
+	ptyRows int
+	ptyCols int
 }
 
 // NewPTYHandler creates a new PTYHandler
 func NewPTYHandler(cmd *exec.Cmd, output chan<- string, logger *logrus.Logger, quiet bool) *PTYHandler {
 	return &PTYHandler{
-		cmd:    cmd,
-		output: output,
-		logger: logger,
-		quiet:  quiet,
+		cmd:     cmd,
+		output:  output,
+		logger:  logger,
+		quiet:   quiet,
 		ptyRows: 24,
 		ptyCols: 80,
 	}

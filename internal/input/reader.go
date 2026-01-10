@@ -11,20 +11,20 @@ import (
 
 // Reader reads from standard input and sends log lines to a channel
 type Reader struct {
-	reader io.Reader
+	reader  io.Reader
 	scanner *bufio.Scanner
-	output chan<- string
-	logger *logrus.Logger
-	quiet  bool
+	output  chan<- string
+	logger  *logrus.Logger
+	quiet   bool
 }
 
 // NewReader creates a new Reader
 func NewReader(reader io.Reader, output chan<- string, logger *logrus.Logger) *Reader {
 	return &Reader{
-		reader: reader,
+		reader:  reader,
 		scanner: bufio.NewScanner(reader),
-		output: output,
-		logger: logger,
+		output:  output,
+		logger:  logger,
 	}
 }
 

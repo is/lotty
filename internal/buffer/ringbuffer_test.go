@@ -202,4 +202,3 @@ func TestCreateLogEntry(t *testing.T) {
 		t.Error("Expected timestamp to be recent")
 	}
 }
-

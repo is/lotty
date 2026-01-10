@@ -11,15 +11,15 @@ import (
 
 // RingBuffer implements a thread-safe ring buffer for log entries
 type RingBuffer struct {
-	mu        sync.RWMutex
-	buffer    []types.LogEntry
-	head      int
-	tail      int
-	size      int
-	capacity  int
-	stats     types.BufferStats
-	logger    *logrus.Logger
-	fullChan  chan struct{}
+	mu       sync.RWMutex
+	buffer   []types.LogEntry
+	head     int
+	tail     int
+	size     int
+	capacity int
+	stats    types.BufferStats
+	logger   *logrus.Logger
+	fullChan chan struct{}
 }
 
 // NewRingBuffer creates a new RingBuffer with the specified capacity

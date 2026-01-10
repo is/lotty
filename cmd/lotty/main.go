@@ -18,10 +18,10 @@ import (
 )
 
 var (
-	cfgFile    string
-	logLevel   string
-	inputMode  string
-	quiet      bool
+	cfgFile   string
+	logLevel  string
+	inputMode string
+	quiet     bool
 )
 
 var rootCmd = &cobra.Command{
@@ -216,10 +216,10 @@ func run(cmd *cobra.Command, args []string) error {
 	// Print final metrics
 	metrics := b.GetMetrics()
 	logger.WithFields(logrus.Fields{
-		"messages_sent":     metrics.MessagesSent,
-		"messages_dropped":  metrics.MessagesDropped,
-		"http_requests":     metrics.HTTPRequests,
-		"http_failures":     metrics.HTTPFailures,
+		"messages_sent":    metrics.MessagesSent,
+		"messages_dropped": metrics.MessagesDropped,
+		"http_requests":    metrics.HTTPRequests,
+		"http_failures":    metrics.HTTPFailures,
 	}).Info("Final metrics")
 
 	// Print buffer stats
@@ -252,7 +252,7 @@ func setupLogger(level string) *logrus.Logger {
 	}
 
 	logger.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp: true,
+		FullTimestamp:   true,
 		TimestampFormat: "2006-01-02T15:04:05",
 	})
 
