@@ -81,7 +81,7 @@ func Retry(ctx context.Context, fn RetryFunc, config *RetryConfig, logger RetryL
 		lastErr = err
 
 		if logger != nil {
-			logger.Warnf("Attempt %d failed: %v", attempt, err)
+			logger.Debugf("Attempt %d failed: %v", attempt, err)
 		}
 	}
 

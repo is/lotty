@@ -46,7 +46,7 @@ func (p *PTYHandler) Start() error {
 		Rows: 24,
 		Cols: 80,
 	}); err != nil {
-		p.logger.Warnf("Failed to set PTY size: %v", err)
+		p.logger.Debugf("Failed to set PTY size: %v", err)
 	}
 
 	// Start reading from PTY
@@ -260,7 +260,7 @@ func MonitorCommand(cfg *types.Config, output chan<- string, logger *logrus.Logg
 
 			// Close handler
 			if cerr := handler.Close(); cerr != nil {
-				logger.Warnf("Error closing handler: %v", cerr)
+				logger.Debugf("Error closing handler: %v", cerr)
 			}
 
 			// Send error

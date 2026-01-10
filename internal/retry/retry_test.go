@@ -54,8 +54,8 @@ func TestRetry_Success(t *testing.T) {
 		t.Errorf("Expected 3 calls, got %d", callCount)
 	}
 
-	if logger.warnCount != 2 {
-		t.Errorf("Expected 2 warnings, got %d", logger.warnCount)
+	if logger.debugCount != 4 {
+		t.Errorf("Expected 4 debug logs, got %d", logger.debugCount)
 	}
 }
 
@@ -85,8 +85,8 @@ func TestRetry_MaxRetries(t *testing.T) {
 		t.Errorf("Expected 3 calls, got %d", callCount)
 	}
 
-	if logger.warnCount != 3 {
-		t.Errorf("Expected 3 warnings, got %d", logger.warnCount)
+	if logger.debugCount != 5 {
+		t.Errorf("Expected 5 debug logs, got %d", logger.debugCount)
 	}
 }
 

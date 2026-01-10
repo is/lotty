@@ -77,20 +77,20 @@ func run(cmd *cobra.Command, args []string) error {
 
 	// Setup logger
 	logger := setupLogger(cfg.LogLevel)
-	logger.Infof("Starting lotty with input mode: %s", cfg.InputMode)
-	logger.Infof("Loki endpoint: %s", cfg.LokiEndpoint)
-	logger.Infof("Buffer size: %d", cfg.BufferSize)
-	logger.Infof("Batch interval: %v", cfg.BatchInterval)
+	logger.Debugf("Starting lotty with input mode: %s", cfg.InputMode)
+	logger.Debugf("Loki endpoint: %s", cfg.LokiEndpoint)
+	logger.Debugf("Buffer size: %d", cfg.BufferSize)
+	logger.Debugf("Batch interval: %v", cfg.BatchInterval)
 
 	// Create buffer
 	buf := buffer.NewRingBuffer(cfg.BufferSize, logger)
-	logger.Infof("Created buffer with capacity: %d", buf.Capacity())
+	logger.Debugf("Created buffer with capacity: %d", buf.Capacity())
 
 	// Create Loki client
 	lokiClient := loki.NewClient(cfg.LokiEndpoint, 30*time.Second, logger)
 	if cfg.LokiUsername != "" || cfg.LokiPassword != "" {
 		lokiClient.SetAuth(cfg.LokiUsername, cfg.LokiPassword)
-		logger.Infof("Basic Auth enabled")
+		logger.Debugf("Basic Auth enabled")
 	}
 
 	// Create batcher
@@ -120,7 +120,7 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 	defer handler.Close()
 
-	logger.Infof("Running command: %s %v", cfg.Command, cfg.Args)
+	logger.Debugf("Running command: %s %v", cfg.Command, cfg.Args)
 
 	// Process input in goroutine
 	go func() {
@@ -145,18 +145,18 @@ func run(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			logger.Errorf("Command exited with error: %v", err)
 		} else {
-			logger.Infof("Command completed successfully")
+			logger.Debugf("Command completed successfully")
 		}
 		// Flush remaining logs after command completes
 		b.Flush()
 
 	case sig := <-sigChan:
-		logger.Infof("Received signal: %v", sig)
-		logger.Infof("Stopping lotty...")
+		logger.Debugf("Received signal: %v", sig)
+		logger.Debugf("Stopping lotty...")
 
 		// Flush remaining logs before stopping
 		b.Flush()
-		logger.Infof("Flushed remaining logs")
+		logger.Debugf("Flushed remaining logs")
 	}
 
 	// Wait a bit for the flush to complete
@@ -167,20 +167,20 @@ func run(cmd *cobra.Command, args []string) error {
 
 	// Print final metrics
 	metrics := b.GetMetrics()
-	logger.Infof("Final metrics:")
-	logger.Infof("  Messages sent: %d", metrics.MessagesSent)
-	logger.Infof("  Messages dropped: %d", metrics.MessagesDropped)
-	logger.Infof("  HTTP requests: %d", metrics.HTTPRequests)
-	logger.Infof("  HTTP failures: %d", metrics.HTTPFailures)
+	logger.Debugf("Final metrics:")
+	logger.Debugf("  Messages sent: %d", metrics.MessagesSent)
+	logger.Debugf("  Messages dropped: %d", metrics.MessagesDropped)
+	logger.Debugf("  HTTP requests: %d", metrics.HTTPRequests)
+	logger.Debugf("  HTTP failures: %d", metrics.HTTPFailures)
 
 	// Print buffer stats
 	stats := buf.Stats()
-	logger.Infof("Buffer stats:")
-	logger.Infof("  Enqueued: %d", stats.Enqueued)
-	logger.Infof("  Dequeued: %d", stats.Dequeued)
-	logger.Infof("  Dropped: %d", stats.Dropped)
+	logger.Debugf("Buffer stats:")
+	logger.Debugf("  Enqueued: %d", stats.Enqueued)
+	logger.Debugf("  Dequeued: %d", stats.Dequeued)
+	logger.Debugf("  Dropped: %d", stats.Dropped)
 
-	logger.Infof("Lotty stopped")
+	logger.Debugf("Lotty stopped")
 
 	return nil
 }

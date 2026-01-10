@@ -191,7 +191,7 @@ func (b *Batcher) MonitorStats(interval time.Duration) {
 				return
 			case <-ticker.C:
 				stats := b.buffer.Stats()
-				b.logger.Infof("Buffer stats: %d/%d (dropped: %d)", stats.Size, stats.Capacity, stats.Dropped)
+				b.logger.Debugf("Buffer stats: %d/%d (dropped: %d)", stats.Size, stats.Capacity, stats.Dropped)
 			}
 		}
 	}()
