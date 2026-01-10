@@ -107,7 +107,6 @@ func run(cmd *cobra.Command, args []string) error {
 
 	// Start batcher
 	b.Start()
-	defer b.Stop()
 
 	// Start stats monitor
 	b.MonitorStats(30 * time.Second)
@@ -146,15 +145,23 @@ func run(cmd *cobra.Command, args []string) error {
 		} else {
 			logger.Infof("Command completed successfully")
 		}
+		// Flush remaining logs after command completes
+		b.Flush()
 
 	case sig := <-sigChan:
 		logger.Infof("Received signal: %v", sig)
 		logger.Infof("Stopping lotty...")
 
-		// Flush remaining logs
+		// Flush remaining logs before stopping
 		b.Flush()
 		logger.Infof("Flushed remaining logs")
 	}
+
+	// Wait a bit for the flush to complete
+	time.Sleep(200 * time.Millisecond)
+
+	// Stop batcher (this will trigger final flush and wait for completion)
+	b.Stop()
 
 	// Print final metrics
 	metrics := b.GetMetrics()
