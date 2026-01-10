@@ -67,6 +67,9 @@ func TestValidateConfig(t *testing.T) {
 				RetryCount:    3,
 				InputMode:     "pty",
 				LogLevel:      "info",
+				PTYRows:       24,
+				PTYCols:       80,
+				StatsInterval: 30 * time.Second,
 			},
 			wantErr: false,
 		},
@@ -130,7 +133,7 @@ func TestLoadConfig(t *testing.T) {
 		os.Unsetenv("LOKI_LABELS")
 	}()
 
-	cfg, err := LoadConfig()
+	cfg, err := LoadConfig("")
 	if err != nil {
 		t.Fatalf("LoadConfig() error = %v", err)
 	}

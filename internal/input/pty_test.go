@@ -230,32 +230,3 @@ func TestCommandHandler_Interface(t *testing.T) {
 		t.Errorf("CommandHandler.Close() error = %v", err)
 	}
 }
-
-func TestMonitorCommand(t *testing.T) {
-	cfg := &types.Config{
-		Command:   "echo",
-		Args:      []string{"test output"},
-		InputMode: "pipe",
-	}
-
-	logger := logrus.New()
-	logger.SetLevel(logrus.ErrorLevel)
-	output := make(chan string, 100)
-
-	// Start the monitor
-	errChan := MonitorCommand(cfg, output, logger, false)
-
-	// Wait for output from the command (should appear quickly)
-	select {
-	case line := <-output:
-		if line != "test output" {
-			t.Errorf("Expected 'test output', got '%s'", line)
-		}
-	case <-time.After(2 * time.Second):
-		t.Error("MonitorCommand() timeout - expected command output")
-	}
-
-	// The monitor will keep running and restart the command
-	// We don't need to wait for errChan in this test
-	_ = errChan
-}

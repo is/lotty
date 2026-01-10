@@ -2,6 +2,8 @@ package loki
 
 import (
 	"bytes"
+	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,15 +11,18 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"github.com/yourname/lotty/internal/retry"
 	"github.com/yourname/lotty/pkg/types"
 )
 
 // Client is an HTTP client for sending logs to Loki
 type Client struct {
-	endpoint   string
-	httpClient *http.Client
-	auth       *Auth
-	logger     *logrus.Logger
+	endpoint       string
+	httpClient     *http.Client
+	auth           *Auth
+	logger         *logrus.Logger
+	requestTimeout time.Duration
+	tlsSkipVerify  bool
 }
 
 // NewClient creates a new Loki client
@@ -27,7 +32,28 @@ func NewClient(endpoint string, timeout time.Duration, logger *logrus.Logger) *C
 		httpClient: &http.Client{
 			Timeout: timeout,
 		},
-		logger: logger,
+		logger:         logger,
+		requestTimeout: timeout / 2, // Request timeout is half of connection timeout
+		tlsSkipVerify:  false,
+	}
+}
+
+// SetTLSConfig configures TLS settings
+func (c *Client) SetTLSConfig(skipVerify bool) {
+	c.tlsSkipVerify = skipVerify
+
+	if skipVerify {
+		// Create custom transport that skips TLS verification
+		transport := &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+		c.httpClient.Transport = transport
+		c.logger.Warn("TLS certificate verification is disabled (INSECURE)")
+	} else {
+		// Reset to default transport
+		c.httpClient.Transport = nil
 	}
 }
 
@@ -48,8 +74,12 @@ func (c *Client) Push(streams []types.LokiStream) error {
 		return fmt.Errorf("failed to marshal request body: %w", err)
 	}
 
-	// Create HTTP request
-	req, err := http.NewRequest("POST", c.endpoint, bytes.NewBuffer(jsonBody))
+	// Create context with timeout for this specific request
+	ctx, cancel := context.WithTimeout(context.Background(), c.requestTimeout)
+	defer cancel()
+
+	// Create HTTP request with context
+	req, err := http.NewRequestWithContext(ctx, "POST", c.endpoint, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
@@ -63,6 +93,9 @@ func (c *Client) Push(streams []types.LokiStream) error {
 	// Send request
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return fmt.Errorf("request timeout after %v", c.requestTimeout)
+		}
 		return fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
@@ -83,26 +116,20 @@ func (c *Client) Push(streams []types.LokiStream) error {
 }
 
 // PushWithRetry sends a batch of log entries to Loki with retry logic
-func (c *Client) PushWithRetry(streams []types.LokiStream, retryCount int, retryDelay time.Duration) error {
-	var lastErr error
-
-	for attempt := 0; attempt <= retryCount; attempt++ {
-		if attempt > 0 {
-			c.logger.Debugf("Retry attempt %d/%d", attempt, retryCount)
-			time.Sleep(retryDelay)
-			retryDelay *= 2 // Exponential backoff
-		}
-
-		err := c.Push(streams)
-		if err == nil {
-			return nil
-		}
-
-		lastErr = err
-		c.logger.Warnf("Push attempt %d failed: %v", attempt, err)
+func (c *Client) PushWithRetry(streams []types.LokiStream, retryCount int, initialRetryDelay time.Duration) error {
+	ctx := context.Background()
+	config := &retry.RetryConfig{
+		MaxRetries:    retryCount,
+		InitialDelay:  initialRetryDelay,
+		MaxDelay:      30 * time.Second,
+		BackoffFactor: 2.0,
 	}
 
-	return fmt.Errorf("failed after %d attempts: %w", retryCount+1, lastErr)
+	fn := func() error {
+		return c.Push(streams)
+	}
+
+	return retry.Retry(ctx, fn, config, c.logger)
 }
 
 // Close closes the HTTP client

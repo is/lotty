@@ -142,10 +142,11 @@ func (b *Batcher) flush() {
 
 		batch := entries[i:end]
 		if err := b.sendBatch(batch); err != nil {
-			b.logger.Errorf("Failed to send batch: %v", err)
+			b.logger.Errorf("Failed to send batch of %d messages: %v", len(batch), err)
 			b.mu.Lock()
 			b.metrics.MessagesDropped += int64(len(batch))
 			b.mu.Unlock()
+			// Continue to next batch
 		}
 	}
 }

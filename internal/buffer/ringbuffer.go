@@ -1,6 +1,7 @@
 package buffer
 
 import (
+	"strings"
 	"sync"
 	"time"
 
@@ -18,7 +19,6 @@ type RingBuffer struct {
 	capacity  int
 	stats     types.BufferStats
 	logger    *logrus.Logger
-	dropChan  chan struct{}
 	fullChan  chan struct{}
 }
 
@@ -31,7 +31,6 @@ func NewRingBuffer(capacity int, logger *logrus.Logger) *RingBuffer {
 			Capacity: capacity,
 		},
 		logger:   logger,
-		dropChan: make(chan struct{}, 100),
 		fullChan: make(chan struct{}, 1),
 	}
 }
@@ -45,7 +44,6 @@ func (rb *RingBuffer) Enqueue(entry types.LogEntry) bool {
 		// Buffer is full, drop the oldest message (FIFO)
 		rb.dropOldest()
 		rb.stats.Dropped++
-		rb.dropChan <- struct{}{}
 		rb.logger.Debugf("Buffer full, dropped oldest message (total dropped: %d)", rb.stats.Dropped)
 	}
 
@@ -172,18 +170,19 @@ func (rb *RingBuffer) dropOldest() {
 	rb.size--
 }
 
-// DropChannel returns a channel that receives a notification when a message is dropped
-func (rb *RingBuffer) DropChannel() <-chan struct{} {
-	return rb.dropChan
-}
-
 // FullChannel returns a channel that receives a notification when the buffer becomes full
 func (rb *RingBuffer) FullChannel() <-chan struct{} {
 	return rb.fullChan
 }
 
 // CreateLogEntry creates a new log entry with the current timestamp
+// Returns an empty LogEntry if the line is empty or contains only whitespace
 func CreateLogEntry(line string) types.LogEntry {
+	// Skip empty lines or lines with only whitespace
+	if len(line) == 0 || len(strings.TrimSpace(line)) == 0 {
+		return types.LogEntry{}
+	}
+
 	return types.LogEntry{
 		Timestamp: time.Now(),
 		Line:      line,

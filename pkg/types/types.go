@@ -33,6 +33,10 @@ type Config struct {
 	LogLevel       string            `mapstructure:"log-level"`
 	Command        string            `mapstructure:"command"`
 	Args           []string          `mapstructure:"args"`
+	PTYRows        int               `mapstructure:"pty-rows"`
+	PTYCols        int               `mapstructure:"pty-cols"`
+	StatsInterval  time.Duration     `mapstructure:"stats-interval"`
+	TLSSkipVerify  bool              `mapstructure:"tls-skip-verify"`
 }
 
 // BufferStats holds buffer statistics
@@ -51,4 +55,13 @@ type Metrics struct {
 	HTTPRequests     int64
 	HTTPFailures     int64
 	RetryAttempts    int64
+}
+
+// Reset resets all metrics to zero
+func (m *Metrics) Reset() {
+	m.MessagesSent = 0
+	m.MessagesDropped = 0
+	m.HTTPRequests = 0
+	m.HTTPFailures = 0
+	m.RetryAttempts = 0
 }

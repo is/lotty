@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -52,7 +53,7 @@ func main() {
 
 func run(cmd *cobra.Command, args []string) error {
 	// Load configuration
-	cfg, err := config.LoadConfig()
+	cfg, err := config.LoadConfig(cfgFile)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
@@ -73,14 +74,18 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Set command and arguments
-	config.SetCommand(cfg, args[0], args[1:]...)
+	if err := config.SetCommand(cfg, args[0], args[1:]...); err != nil {
+		return fmt.Errorf("invalid command: %w", err)
+	}
 
 	// Setup logger
 	logger := setupLogger(cfg.LogLevel)
-	logger.Debugf("Starting lotty with input mode: %s", cfg.InputMode)
-	logger.Debugf("Loki endpoint: %s", cfg.LokiEndpoint)
-	logger.Debugf("Buffer size: %d", cfg.BufferSize)
-	logger.Debugf("Batch interval: %v", cfg.BatchInterval)
+	logger.WithFields(logrus.Fields{
+		"input_mode":     cfg.InputMode,
+		"loki_endpoint":  cfg.LokiEndpoint,
+		"buffer_size":    cfg.BufferSize,
+		"batch_interval": cfg.BatchInterval,
+	}).Info("Starting lotty")
 
 	// Create buffer
 	buf := buffer.NewRingBuffer(cfg.BufferSize, logger)
@@ -88,6 +93,13 @@ func run(cmd *cobra.Command, args []string) error {
 
 	// Create Loki client
 	lokiClient := loki.NewClient(cfg.LokiEndpoint, 30*time.Second, logger)
+
+	// Configure TLS
+	if cfg.TLSSkipVerify {
+		lokiClient.SetTLSConfig(cfg.TLSSkipVerify)
+	}
+
+	// Configure authentication
 	if cfg.LokiUsername != "" || cfg.LokiPassword != "" {
 		lokiClient.SetAuth(cfg.LokiUsername, cfg.LokiPassword)
 		logger.Debugf("Basic Auth enabled")
@@ -111,7 +123,7 @@ func run(cmd *cobra.Command, args []string) error {
 	b.Start()
 
 	// Start stats monitor
-	b.MonitorStats(30 * time.Second)
+	b.MonitorStats(cfg.StatsInterval)
 
 	// Run command
 	handler, err := input.RunCommand(cfg, inputChan, logger, quiet)
@@ -120,13 +132,24 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 	defer handler.Close()
 
-	logger.Debugf("Running command: %s %v", cfg.Command, cfg.Args)
+	logger.WithFields(logrus.Fields{
+		"command": cfg.Command,
+		"args":    cfg.Args,
+	}).Info("Running command")
+
+	// Create a WaitGroup to track the input processor goroutine
+	var inputWg sync.WaitGroup
+	inputWg.Add(1)
 
 	// Process input in goroutine
 	go func() {
+		defer inputWg.Done()
 		for line := range inputChan {
 			entry := buffer.CreateLogEntry(line)
-			buf.Enqueue(entry)
+			// Skip empty entries
+			if entry.Line != "" {
+				buf.Enqueue(entry)
+			}
 		}
 	}()
 
@@ -143,44 +166,49 @@ func run(cmd *cobra.Command, args []string) error {
 	select {
 	case err := <-errChan:
 		if err != nil {
-			logger.Errorf("Command exited with error: %v", err)
+			logger.WithError(err).Error("Command exited with error")
 		} else {
-			logger.Debugf("Command completed successfully")
+			logger.Info("Command completed successfully")
 		}
 		// Flush remaining logs after command completes
 		b.Flush()
 
 	case sig := <-sigChan:
-		logger.Debugf("Received signal: %v", sig)
-		logger.Debugf("Stopping lotty...")
+		logger.WithField("signal", sig).Info("Received signal")
+		logger.Info("Stopping lotty...")
 
 		// Flush remaining logs before stopping
 		b.Flush()
 		logger.Debugf("Flushed remaining logs")
 	}
 
-	// Wait a bit for the flush to complete
-	time.Sleep(200 * time.Millisecond)
+	// Close input channel to signal goroutine to stop
+	close(inputChan)
+
+	// Wait for input processor goroutine to finish
+	inputWg.Wait()
 
 	// Stop batcher (this will trigger final flush and wait for completion)
 	b.Stop()
 
 	// Print final metrics
 	metrics := b.GetMetrics()
-	logger.Debugf("Final metrics:")
-	logger.Debugf("  Messages sent: %d", metrics.MessagesSent)
-	logger.Debugf("  Messages dropped: %d", metrics.MessagesDropped)
-	logger.Debugf("  HTTP requests: %d", metrics.HTTPRequests)
-	logger.Debugf("  HTTP failures: %d", metrics.HTTPFailures)
+	logger.WithFields(logrus.Fields{
+		"messages_sent":     metrics.MessagesSent,
+		"messages_dropped":  metrics.MessagesDropped,
+		"http_requests":     metrics.HTTPRequests,
+		"http_failures":     metrics.HTTPFailures,
+	}).Info("Final metrics")
 
 	// Print buffer stats
 	stats := buf.Stats()
-	logger.Debugf("Buffer stats:")
-	logger.Debugf("  Enqueued: %d", stats.Enqueued)
-	logger.Debugf("  Dequeued: %d", stats.Dequeued)
-	logger.Debugf("  Dropped: %d", stats.Dropped)
+	logger.WithFields(logrus.Fields{
+		"enqueued": stats.Enqueued,
+		"dequeued": stats.Dequeued,
+		"dropped":  stats.Dropped,
+	}).Debug("Buffer stats")
 
-	logger.Debugf("Lotty stopped")
+	logger.Info("Lotty stopped")
 
 	return nil
 }

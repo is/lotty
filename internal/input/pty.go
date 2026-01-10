@@ -5,8 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"syscall"
-	"time"
+	"strings"
 
 	"github.com/creack/pty"
 	"github.com/sirupsen/logrus"
@@ -15,11 +14,13 @@ import (
 
 // PTYHandler handles PTY-based command execution and output capture
 type PTYHandler struct {
-	cmd    *exec.Cmd
-	pty    *os.File
-	output chan<- string
-	logger *logrus.Logger
-	quiet  bool
+	cmd      *exec.Cmd
+	pty      *os.File
+	output   chan<- string
+	logger    *logrus.Logger
+	quiet     bool
+	ptyRows   int
+	ptyCols   int
 }
 
 // NewPTYHandler creates a new PTYHandler
@@ -29,7 +30,15 @@ func NewPTYHandler(cmd *exec.Cmd, output chan<- string, logger *logrus.Logger, q
 		output: output,
 		logger: logger,
 		quiet:  quiet,
+		ptyRows: 24,
+		ptyCols: 80,
 	}
+}
+
+// SetPTYSize sets the PTY terminal size
+func (p *PTYHandler) SetPTYSize(rows, cols int) {
+	p.ptyRows = rows
+	p.ptyCols = cols
 }
 
 // Start starts the PTY handler
@@ -43,8 +52,8 @@ func (p *PTYHandler) Start() error {
 
 	// Set PTY size
 	if err := pty.Setsize(ptyFile, &pty.Winsize{
-		Rows: 24,
-		Cols: 80,
+		Rows: uint16(p.ptyRows),
+		Cols: uint16(p.ptyCols),
 	}); err != nil {
 		p.logger.Debugf("Failed to set PTY size: %v", err)
 	}
@@ -74,17 +83,17 @@ func (p *PTYHandler) readFromPTY() {
 	for {
 		n, err := p.pty.Read(buf)
 		if err != nil {
-			// "input/output error" is common when the command completes quickly
-			// and the PTY is closed. This is not a real error.
-			if err != io.EOF {
-				// Check if it's the common PTY I/O error that occurs on normal exit
-				errStr := err.Error()
-				if errStr == "read /dev/ptmx: input/output error" ||
-				   errStr == "input/output error" {
-					p.logger.Debugf("PTY closed (command completed)")
-				} else {
-					p.logger.Errorf("Error reading from PTY: %v", err)
-				}
+			// PTY read errors are common when the command completes
+			// These are not real errors, just normal shutdown
+			if err == io.EOF {
+				// Normal EOF when command completes
+				p.logger.Debugf("PTY closed (command completed)")
+			} else if isExpectedPTYError(err) {
+				// Other expected PTY errors (e.g., broken pipe, I/O errors)
+				p.logger.Debugf("PTY closed with expected error: %v", err)
+			} else {
+				// Unexpected error that should be logged
+				p.logger.Errorf("Error reading from PTY: %v", err)
 			}
 			return
 		}
@@ -95,7 +104,14 @@ func (p *PTYHandler) readFromPTY() {
 		for _, line := range lines {
 			if line != "" {
 				// Send to output channel (for Loki)
-				p.output <- line
+				select {
+				case p.output <- line:
+					// Send successful
+				default:
+					// Channel closed or full, skip this line
+					p.logger.Debugf("Output channel closed or full, skipping line")
+					return
+				}
 				// Also print to stdout unless in quiet mode
 				if !p.quiet {
 					fmt.Println(line)
@@ -103,6 +119,25 @@ func (p *PTYHandler) readFromPTY() {
 			}
 		}
 	}
+}
+
+// isExpectedPTYError checks if an error is an expected PTY shutdown error
+func isExpectedPTYError(err error) bool {
+	if err == nil {
+		return false
+	}
+	// Check for timeout errors
+	if os.IsTimeout(err) {
+		return true
+	}
+	// Check for common PTY shutdown errors
+	errStr := err.Error()
+	// EIO - Input/output error (common with PTY on Linux)
+	// EPIPE - Broken pipe (when process terminates)
+	// These are expected during normal shutdown
+	return strings.Contains(errStr, "input/output error") ||
+		strings.Contains(errStr, "broken pipe") ||
+		strings.Contains(errStr, "operation not permitted")
 }
 
 // SplitLines splits text into lines
@@ -211,6 +246,7 @@ func RunCommand(cfg *types.Config, output chan<- string, logger *logrus.Logger, 
 
 	if cfg.InputMode == "pty" {
 		handler := NewPTYHandler(cmd, output, logger, quiet)
+		handler.SetPTYSize(cfg.PTYRows, cfg.PTYCols)
 		if err := handler.Start(); err != nil {
 			return nil, err
 		}
@@ -229,50 +265,4 @@ type CommandHandler interface {
 	Start() error
 	Wait() error
 	Close() error
-}
-
-// SetupProcessGroup sets up the process group for proper signal handling
-func SetupProcessGroup(cmd *exec.Cmd) {
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid: true,
-	}
-}
-
-// KillProcessGroup kills the entire process group
-func KillProcessGroup(pid int) error {
-	return syscall.Kill(-pid, syscall.SIGTERM)
-}
-
-// MonitorCommand monitors a command and restarts it if needed
-func MonitorCommand(cfg *types.Config, output chan<- string, logger *logrus.Logger, quiet bool) <-chan error {
-	errChan := make(chan error, 1)
-
-	go func() {
-		for {
-			handler, err := RunCommand(cfg, output, logger, quiet)
-			if err != nil {
-				errChan <- err
-				return
-			}
-
-			// Wait for command to finish
-			err = handler.Wait()
-
-			// Close handler
-			if cerr := handler.Close(); cerr != nil {
-				logger.Debugf("Error closing handler: %v", cerr)
-			}
-
-			// Send error
-			if err != nil {
-				errChan <- err
-				return
-			}
-
-			// Sleep before restarting
-			time.Sleep(1 * time.Second)
-		}
-	}()
-
-	return errChan
 }
