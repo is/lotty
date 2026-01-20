@@ -1,20 +1,20 @@
 # Lotty
 
-Lotty是一个将命令输出通过HTTP API发送到Grafana Loki的Go程序，支持PTY能力、内存缓存和批量发送。
+Lotty is a Go program that sends command output to Grafana Loki via HTTP API. It supports PTY capabilities, in-memory buffering, and batch sending.
 
-## 特性
+## Features
 
-- **双模式输入**：支持PTY模式（默认）和简单管道模式
-- **内存缓存**：使用环形缓冲区，默认10000条消息，FIFO丢弃策略
-- **批量发送**：支持时间触发（默认900ms）和缓冲区满载触发
-- **Basic Auth**：完整的Loki HTTP API认证支持
-- **配置灵活**：支持命令行参数和环境变量
-- **重试机制**：指数退避算法，默认重试3次
-- **优雅关闭**：支持SIGINT和SIGTERM信号处理
+- **Dual Input Modes**: Supports PTY mode (default) and simple pipe mode
+- **In-Memory Buffer**: Uses ring buffer with default 10,000 messages, FIFO discard policy
+- **Batch Sending**: Supports time-based triggering (default 900ms) and buffer-full triggering
+- **Basic Auth**: Complete Loki HTTP API authentication support
+- **Flexible Configuration**: Supports command-line arguments and environment variables
+- **Retry Mechanism**: Exponential backoff algorithm, default 3 retries
+- **Graceful Shutdown**: Supports SIGINT and SIGTERM signal handling
 
-## 安装
+## Installation
 
-### 从源码构建
+### Build from Source
 
 ```bash
 git clone https://github.com/yourname/lotty.git
@@ -22,7 +22,7 @@ cd lotty
 make build
 ```
 
-### 使用Docker
+### Using Docker
 
 ```bash
 docker build -t lotty:latest .
@@ -32,126 +32,126 @@ docker run -e LOKI_ENDPOINT=http://loki:3100 \
            lotty:latest -- your-command
 ```
 
-## 配置
+## Configuration
 
-所有配置项都支持环境变量，优先级：命令行参数 > 环境变量 > 默认值
+All configuration items support environment variables. Priority: command-line arguments > environment variables > default values
 
-### 环境变量
+### Environment Variables
 
-| 变量名 | 描述 | 默认值 |
-|--------|------|--------|
-| `LOKI_ENDPOINT` | Loki服务地址 | 无（必需） |
-| `LOKI_USERNAME` | Basic Auth用户名 | 无 |
-| `LOKI_PASSWORD` | Basic Auth密码 | 无 |
-| `LOKI_LABELS` | Loki标签，格式key=value | 无 |
-| `BUFFER_SIZE` | 缓冲区大小 | 10000 |
-| `BATCH_INTERVAL` | 批量发送间隔 | 900ms |
-| `BATCH_SIZE` | 批量大小 | 1000 |
-| `RETRY_COUNT` | 重试次数 | 3 |
-| `INPUT_MODE` | 输入模式(pty/pipe) | pty |
-| `LOG_LEVEL` | 日志级别 | info |
+| Variable Name | Description | Default Value |
+|---------------|-------------|---------------|
+| `LOKI_ENDPOINT` | Loki service address | None (required) |
+| `LOKI_USERNAME` | Basic Auth username | None |
+| `LOKI_PASSWORD` | Basic Auth password | None |
+| `LOKI_LABELS` | Loki labels, format key=value | None |
+| `BUFFER_SIZE` | Buffer size | 10000 |
+| `BATCH_INTERVAL` | Batch sending interval | 900ms |
+| `BATCH_SIZE` | Batch size | 1000 |
+| `RETRY_COUNT` | Retry count | 3 |
+| `INPUT_MODE` | Input mode (pty/pipe) | pty |
+| `LOG_LEVEL` | Log level | info |
 
-### 命令行参数
+### Command-Line Arguments
 
 ```bash
 lotty [flags] -- command [args...]
 
 Flags:
-  --config string       配置文件 (默认是 $HOME/.lotty.yaml)
-  --input-mode string   输入模式 (pty, pipe) (默认 "pty")
-  --log-level string    日志级别 (debug, info, warn, error) (默认 "info")
-  -h, --help           显示帮助信息
+  --config string       Configuration file (default is $HOME/.lotty.yaml)
+  --input-mode string   Input mode (pty, pipe) (default "pty")
+  --log-level string    Log level (debug, info, warn, error) (default "info")
+  -h, --help           Show help information
 ```
 
-## 使用示例
+## Usage Examples
 
-### 基本用法
+### Basic Usage
 
 ```bash
-# 使用环境变量配置
+# Configure using environment variables
 export LOKI_ENDPOINT="http://localhost:3100/loki/api/v1/push"
 export LOKI_USERNAME="admin"
 export LOKI_PASSWORD="password"
 export LOKI_LABELS="service=myapp,env=prod"
 
-# 发送ping输出到Loki
+# Send ping output to Loki
 lotty -- ping google.com
 ```
 
-### 使用管道模式
+### Using Pipe Mode
 
 ```bash
-# 监控日志文件
+# Monitor log files
 lotty --input-mode pipe -- tail -f /var/log/app.log
 ```
 
-### 使用PTY模式（默认）
+### Using PTY Mode (Default)
 
 ```bash
-# 监控应用程序输出（支持彩色输出和交互式程序）
+# Monitor application output (supports colored output and interactive programs)
 lotty -- my-app --arg1 --arg2
 ```
 
-## 架构
+## Architecture
 
 ```
-命令输出 → PTY/管道捕获 → 行解析 → 内存缓存 → 批量处理器 → HTTP客户端 → Loki
+Command Output → PTY/Pipe Capture → Line Parsing → Memory Buffer → Batch Processor → HTTP Client → Loki
 ```
 
-### 核心组件
+### Core Components
 
-- **输入处理**：支持PTY和管道两种模式，捕获命令的标准输出和标准错误
-- **内存缓存**：环形缓冲区实现，线程安全，满载时FIFO丢弃
-- **批量处理器**：定时器触发和缓冲区满载触发，支持动态批量大小
-- **Loki客户端**：HTTP客户端，支持Basic Auth，JSON格式请求
-- **重试机制**：指数退避算法，最大重试次数可配置
+- **Input Processing**: Supports PTY and pipe modes, captures command stdout and stderr
+- **Memory Buffer**: Ring buffer implementation, thread-safe, FIFO discard when full
+- **Batch Processor**: Timer-triggered and buffer-full triggered, supports dynamic batch size
+- **Loki Client**: HTTP client with Basic Auth support, JSON format requests
+- **Retry Mechanism**: Exponential backoff algorithm, configurable maximum retry count
 
-## 开发
+## Development
 
-### 运行测试
+### Running Tests
 
 ```bash
-# 运行所有测试
+# Run all tests
 make test
 
-# 生成测试覆盖率报告
+# Generate test coverage report
 make test-coverage
 ```
 
-### 代码检查
+### Code Linting
 
 ```bash
-# 运行linter
+# Run linter
 make lint
 
-# 格式化代码
+# Format code
 make fmt
 ```
 
-### 构建
+### Building
 
 ```bash
-# 构建二进制文件
+# Build binary
 make build
 
-# 交叉编译
+# Cross-compile
 make build-all
 ```
 
-## 项目结构
+## Project Structure
 
 ```
 lotty/
-├── cmd/lotty/main.go          # 主入口
+├── cmd/lotty/main.go          # Main entry point
 ├── internal/
-│   ├── config/              # 配置管理
-│   ├── input/               # 输入处理（pty + reader）
-│   ├── buffer/              # 环形缓冲区
-│   ├── loki/                # HTTP客户端 + Auth
-│   ├── batcher/             # 批量处理器
-│   └── retry/               # 重试机制
+│   ├── config/              # Configuration management
+│   ├── input/               # Input processing (pty + reader)
+│   ├── buffer/              # Ring buffer
+│   ├── loki/                # HTTP client + Auth
+│   ├── batcher/             # Batch processor
+│   └── retry/               # Retry mechanism
 ├── pkg/
-│   └── types/               # 公共类型
+│   └── types/               # Common types
 ├── go.mod
 ├── go.sum
 ├── Makefile
@@ -159,36 +159,36 @@ lotty/
 └── README.md
 ```
 
-## 性能指标
+## Performance Metrics
 
-- **内存占用**：根据缓冲区大小配置，默认约10MB
-- **吞吐量**：取决于批量间隔和网络延迟
-- **CPU占用**：低，主要在批量发送和网络请求时
+- **Memory Usage**: Depends on buffer size configuration, default ~10MB
+- **Throughput**: Depends on batch interval and network latency
+- **CPU Usage**: Low, mainly during batch sending and network requests
 
-## 故障排查
+## Troubleshooting
 
-### 连接问题
+### Connection Issues
 
-- 检查Loki服务可达性
-- 验证认证信息
-- 查看网络连接状态
+- Check Loki service reachability
+- Verify authentication information
+- Check network connection status
 
-### 性能问题
+### Performance Issues
 
-- 监控内存使用
-- 调整批量大小
-- 优化缓冲区配置
+- Monitor memory usage
+- Adjust batch size
+- Optimize buffer configuration
 
-### PTY问题
+### PTY Issues
 
-- 检查命令执行权限
-- 验证终端环境
-- 查看进程状态
+- Check command execution permissions
+- Verify terminal environment
+- Check process status
 
-## 许可证
+## License
 
 MIT License
 
-## 贡献
+## Contributing
 
-欢迎提交Pull Request或Issue。
+Pull Requests and Issues are welcome.
